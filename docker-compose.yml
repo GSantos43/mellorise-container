@@ -1,0 +1,92 @@
+services:
+  db:
+    image: mariadb:latest
+    container_name: headless-wp-db
+    restart: unless-stopped
+    environment:
+      MARIADB_DATABASE: ${MARIADB_DATABASE:-wordpress}
+      MARIADB_USER: ${MARIADB_USER:-wordpress}
+      MARIADB_PASSWORD: ${MARIADB_PASSWORD:?set_MARIADB_PASSWORD}
+      MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD:?set_MARIADB_ROOT_PASSWORD}
+    volumes:
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    mem_limit: 1g
+    command:
+      - --max_allowed_packet=256M
+      - --innodb_buffer_pool_size=256M
+
+  wordpress:
+    image: wordpress:latest
+    container_name: headless-wp-app
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8080:80"
+    environment:
+      WORDPRESS_DB_HOST: db:3306
+      WORDPRESS_DB_NAME: ${MARIADB_DATABASE:-wordpress}
+      WORDPRESS_DB_USER: ${MARIADB_USER:-wordpress}
+      WORDPRESS_DB_PASSWORD: ${MARIADB_PASSWORD:?set_MARIADB_PASSWORD}
+      WORDPRESS_TABLE_PREFIX: ${WORDPRESS_TABLE_PREFIX:-wp_}
+      WORDPRESS_DEBUG: ${WORDPRESS_DEBUG:-1}
+      WORDPRESS_CONFIG_EXTRA: |
+        define('WP_MEMORY_LIMIT', '${WP_MEMORY_LIMIT:-256M}');
+        define('WP_MAX_MEMORY_LIMIT', '${WP_MAX_MEMORY_LIMIT:-512M}');
+        define('WP_ENVIRONMENT_TYPE', '${WP_ENVIRONMENT_TYPE:-development}');
+        define('WP_HOME', '${WORDPRESS_PUBLIC_URL:-http://localhost:8080}');
+        define('WP_SITEURL', '${WORDPRESS_PUBLIC_URL:-http://localhost:8080}');
+    volumes:
+      - wp_content:/var/www/html/wp-content
+      - ./uploads.ini:/usr/local/etc/php/conf.d/uploads.ini:ro
+    mem_limit: 1536m
+
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: headless-wp-phpmyadmin
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8081:80"
+    environment:
+      PMA_HOST: db
+      PMA_PORT: 3306
+      UPLOAD_LIMIT: ${PHPMYADMIN_UPLOAD_LIMIT:-256M}
+    mem_limit: 512m
+
+  bff:
+    build:
+      context: ../bff
+    container_name: headless-woo-bff
+    restart: unless-stopped
+    depends_on:
+      wordpress:
+        condition: service_started
+    ports:
+      - "${BFF_PORT:-3000}:3000"
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      PORT: 3000
+      FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:-http://localhost:5173,http://localhost:5174,http://localhost:5175}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5175}
+      WOOCOMMERCE_URL: ${WOOCOMMERCE_URL:-http://wordpress}
+      WOOCOMMERCE_CONSUMER_KEY: ${WOOCOMMERCE_CONSUMER_KEY:?set_WOOCOMMERCE_CONSUMER_KEY}
+      WOOCOMMERCE_CONSUMER_SECRET: ${WOOCOMMERCE_CONSUMER_SECRET:?set_WOOCOMMERCE_CONSUMER_SECRET}
+      WOOCOMMERCE_TIMEOUT_MS: ${WOOCOMMERCE_TIMEOUT_MS:-8000}
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:?set_STRIPE_SECRET_KEY}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
+      STRIPE_SHIPPING_COUNTRIES: ${STRIPE_SHIPPING_COUNTRIES:-US,CA,GB,ES}
+      STRIPE_AUTOMATIC_TAX_ENABLED: ${STRIPE_AUTOMATIC_TAX_ENABLED:-false}
+      STRIPE_TIMEOUT_MS: ${STRIPE_TIMEOUT_MS:-10000}
+
+volumes:
+  db_data:
+  wp_content:

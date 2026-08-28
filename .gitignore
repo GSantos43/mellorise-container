@@ -1,0 +1,11 @@
+.env
+.env.local
+.env.*.local
+!.env.example
+!.env-example
+
+db_data/
+wp_content/
+
+.DS_Store
+Thumbs.db
