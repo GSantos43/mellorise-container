@@ -45,6 +45,7 @@ services:
         define('FORCE_SSL_ADMIN', true);
         define('WP_HOME', '${WORDPRESS_PUBLIC_URL:-http://localhost:8080}');
         define('WP_SITEURL', '${WORDPRESS_PUBLIC_URL:-http://localhost:8080}');
+        define('MELLORISE_WETRACKED_API_KEY', '${WETRACKED_API_KEY:-}');
     volumes:
       - wp_content:/var/www/html/wp-content
       - ./mu-plugins:/var/www/html/wp-content/mu-plugins:ro
@@ -94,6 +95,11 @@ services:
       ANALYTICS_GEO_ENABLED: ${ANALYTICS_GEO_ENABLED:-true}
       ANALYTICS_GEO_PROVIDER_URL: ${ANALYTICS_GEO_PROVIDER_URL:-https://ipwho.is/{ip}}
       ANALYTICS_GEO_TIMEOUT_MS: ${ANALYTICS_GEO_TIMEOUT_MS:-2500}
+      WETRACKED_ENABLED: ${WETRACKED_ENABLED:-false}
+      WETRACKED_API_KEY: ${WETRACKED_API_KEY:-}
+      WETRACKED_API_URL: ${WETRACKED_API_URL:-https://pixel.wetracked.io/woo}
+      WETRACKED_SITE_DOMAIN: ${WETRACKED_SITE_DOMAIN:-https://mellorise.shop}
+      WETRACKED_TIMEOUT_MS: ${WETRACKED_TIMEOUT_MS:-1500}
       CLERK_SECRET_KEY: ${CLERK_SECRET_KEY:-}
       CLERK_AUTHORIZED_PARTIES: ${CLERK_AUTHORIZED_PARTIES:-}
       CHECKOUT_MAX_ITEM_QUANTITY: ${CHECKOUT_MAX_ITEM_QUANTITY:-12}
